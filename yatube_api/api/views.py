@@ -1,10 +1,11 @@
 from django.db.models import QuerySet
 from django.shortcuts import get_object_or_404
 from rest_framework import viewsets
-from rest_framework.exceptions import PermissionDenied
+from rest_framework.permissions import IsAuthenticated
 
 from posts.models import Comment, Group, Post
 
+from .permissions import IsAuthorOrReadOnly
 from .serializers import CommentSerializer, GroupSerializer, PostSerializer
 
 
@@ -15,53 +16,15 @@ class PostViewSet(viewsets.ModelViewSet):
     Атрибуты:
         queryset: Все объекты Post.
         serializer_class: Сериализатор для Post.
+        permission_classes: Права доступа.
     """
 
-    queryset = Post.objects.all()
+    queryset = Post.objects.select_related('author').all()
     serializer_class = PostSerializer
+    permission_classes = [IsAuthenticated, IsAuthorOrReadOnly]
 
     def perform_create(self, serializer) -> None:
-        """
-        Сохраняет пост с текущим пользователем как автором.
-
-        Args:
-            serializer: Сериализатор данных для создания объекта.
-        """
         serializer.save(author=self.request.user)
-
-    def perform_update(self, serializer) -> None:
-        """
-        Обновляет пост, если текущий пользователь - автор.
-
-        Args:
-            serializerСериализатор данных для обновления объекта.
-
-        Raises:
-            PermissionDenied: Если текущий пользователь не является
-            автором поста.
-        """
-        if serializer.instance.author != self.request.user:
-            raise PermissionDenied(
-                'Вы не можете редактировать чужой пост.'
-            )
-        serializer.save()
-
-    def perform_destroy(self, instance) -> None:
-        """
-        Удаляет пост, если текущий пользователь - автор.
-
-        Args:
-            instance: Экземпляр поста для удаления.
-
-        Raises:
-            PermissionDenied: Если текущий пользователь не является
-            автором поста.
-        """
-        if instance.author != self.request.user:
-            raise PermissionDenied(
-                'Вы не можете удалить чужой пост.'
-            )
-        instance.delete()
 
 
 class GroupViewSet(viewsets.ReadOnlyModelViewSet):
@@ -71,10 +34,12 @@ class GroupViewSet(viewsets.ReadOnlyModelViewSet):
     Атрибуты:
         queryset: Все объекты Group.
         serializer_class: Сериализатор для Group.
+        permission_classes: Права доступа.
     """
 
     queryset = Group.objects.all()
     serializer_class = GroupSerializer
+    permission_classes = [IsAuthenticated]
 
 
 class CommentViewSet(viewsets.ModelViewSet):
@@ -84,10 +49,12 @@ class CommentViewSet(viewsets.ModelViewSet):
     Атрибуты:
         queryset: Все объекты Comment.
         serializer_class: Сериализатор для Comment.
+        permission_classes: Права доступа.
     """
 
     queryset = Comment.objects.all()
     serializer_class = CommentSerializer
+    permission_classes = [IsAuthenticated, IsAuthorOrReadOnly]
 
     def get_post(self) -> Post:
         """
@@ -103,53 +70,13 @@ class CommentViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self) -> QuerySet[Comment]:
         """
-        Получить queryset комментариев, относящихся к текущему посту.
+        Возвращаем комментарии, отфильтрованные по post_id.
 
         Returns:
             QuerySet: QuerySet комментариев поста.
         """
-        return self.get_post().comments.all()
+        post_id = self.kwargs.get('post_id')
+        return Comment.objects.filter(post_id=post_id).select_related('author')
 
     def perform_create(self, serializer) -> None:
-        """
-        Сохраняет комментарий с текущим пользователем как автором и
-        связывает с постом.
-
-        Args:
-            serializer: Сериализатор данных для создания объекта.
-        """
         serializer.save(author=self.request.user, post=self.get_post())
-
-    def perform_update(self, serializer) -> None:
-        """
-        Обновляет комментарий, если текущий пользователь - автор.
-
-        Args:
-            serializer: Сериализатор данных для обновления объекта.
-
-        Raises:
-            PermissionDenied: Если текущий пользователь не является
-            автором комментария.
-        """
-        if serializer.instance.author != self.request.user:
-            raise PermissionDenied(
-                'Вы не можете редактировать чужой комментарий.'
-            )
-        serializer.save()
-
-    def perform_destroy(self, instance) -> None:
-        """
-        Удаляет комментарий, если текущий пользователь - автор.
-
-        Args:
-            instance: Экземпляр комментария для удаления.
-
-        Raises:
-            PermissionDenied: Если текущий пользователь не является
-            автором комментария.
-        """
-        if instance.author != self.request.user:
-            raise PermissionDenied(
-                'Вы не можете удалить чужой комментарий.'
-            )
-        instance.delete()
