@@ -19,7 +19,7 @@ class PostViewSet(viewsets.ModelViewSet):
         permission_classes: Права доступа.
     """
 
-    queryset = Post.objects.select_related('author').all()
+    queryset = Post.objects.select_related('author')
     serializer_class = PostSerializer
     permission_classes = [IsAuthenticated, IsAuthorOrReadOnly]
 
@@ -52,7 +52,6 @@ class CommentViewSet(viewsets.ModelViewSet):
         permission_classes: Права доступа.
     """
 
-    queryset = Comment.objects.all()
     serializer_class = CommentSerializer
     permission_classes = [IsAuthenticated, IsAuthorOrReadOnly]
 
@@ -69,12 +68,6 @@ class CommentViewSet(viewsets.ModelViewSet):
         return get_object_or_404(Post, id=self.kwargs.get('post_id'))
 
     def get_queryset(self) -> QuerySet[Comment]:
-        """
-        Возвращаем комментарии, отфильтрованные по post_id.
-
-        Returns:
-            QuerySet: QuerySet комментариев поста.
-        """
         post_id = self.kwargs.get('post_id')
         return Comment.objects.filter(post_id=post_id).select_related('author')
 

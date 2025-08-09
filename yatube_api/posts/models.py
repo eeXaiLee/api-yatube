@@ -9,13 +9,13 @@ class Group(models.Model):
     slug = models.SlugField(unique=True, verbose_name='Слаг')
     description = models.TextField(verbose_name='Описание группы')
 
-    def __str__(self):
-        return self.title
-
     class Meta:
         verbose_name = 'Группа'
         verbose_name_plural = 'Группы'
         ordering = ['title']
+
+    def __str__(self):
+        return self.title
 
 
 class Post(models.Model):
@@ -37,15 +37,13 @@ class Post(models.Model):
         related_name='posts', blank=True, null=True, verbose_name='Группа'
     )
 
-    def __str__(self):
-        if len(self.text) >= 50:
-            return self.text[:50] + '...'
-        return self.text
-
     class Meta:
         verbose_name = 'Пост'
         verbose_name_plural = 'Посты'
         ordering = ['-pub_date']
+
+    def __str__(self):
+        return self.text[:50]
 
 
 class Comment(models.Model):
@@ -66,12 +64,10 @@ class Comment(models.Model):
         auto_now_add=True, db_index=True, verbose_name='Дата добавления'
     )
 
-    def __str__(self):
-        if len(self.text) >= 50:
-            return self.text[:50] + '...'
-        return self.text
-
     class Meta:
         verbose_name = 'Комментарий'
         verbose_name_plural = 'Комментарии'
         ordering = ['-created']
+
+    def __str__(self):
+        return self.text[:50]
